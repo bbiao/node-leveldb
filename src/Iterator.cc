@@ -77,13 +77,13 @@ void Iterator::EIO_BeforeSeekToFirst(SeekParams *params) {
    eio_custom(EIO_SeekToFirst, EIO_PRI_DEFAULT, EIO_AfterSeek, params);
 }
 
-int Iterator::EIO_SeekToFirst(eio_req *req) {
+eio_return_type Iterator::EIO_SeekToFirst(eio_req *req) {
    SeekParams *params = static_cast<SeekParams*>(req->data);
    Iterator *self = params->self;
 
    self->it->SeekToFirst();
 
-   return 0;
+   eio_return_stmt;
 }
 
 Handle<Value> Iterator::SeekToLast(const Arguments& args) {
@@ -101,13 +101,13 @@ void Iterator::EIO_BeforeSeekToLast(SeekParams *params) {
    eio_custom(EIO_SeekToLast, EIO_PRI_DEFAULT, EIO_AfterSeek, params);
 }
 
-int Iterator::EIO_SeekToLast(eio_req *req) {
+eio_return_type Iterator::EIO_SeekToLast(eio_req *req) {
    SeekParams *params = static_cast<SeekParams*>(req->data);
    Iterator *self = params->self;
 
    self->it->SeekToLast();
 
-   return 0;
+   eio_return_stmt;
 }
 
 Handle<Value> Iterator::Seek(const Arguments& args) {
@@ -132,13 +132,13 @@ void Iterator::EIO_BeforeSeek(SeekParams *params) {
    eio_custom(EIO_Seek, EIO_PRI_DEFAULT, EIO_AfterSeek, params);
 }
 
-int Iterator::EIO_Seek(eio_req *req) {
+eio_return_type Iterator::EIO_Seek(eio_req *req) {
    SeekParams *params = static_cast<SeekParams*>(req->data);
    Iterator *self = params->self;
 
    self->it->Seek(params->key);
 
-   return 0;
+   eio_return_stmt;
 }
 
 int Iterator::EIO_AfterSeek(eio_req *req) {

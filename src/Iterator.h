@@ -6,6 +6,8 @@
 
 #include "leveldb/iterator.h"
 
+#include "helpers.h"
+
 using namespace v8;
 using namespace node;
 
@@ -59,13 +61,13 @@ class Iterator : ObjectWrap {
     };
 
     static void EIO_BeforeSeek(SeekParams *params);
-    static int EIO_Seek(eio_req *req);
+    static eio_return_type EIO_Seek(eio_req *req);
 
     static void EIO_BeforeSeekToLast(SeekParams *params);
-    static int EIO_SeekToLast(eio_req *req);
+    static eio_return_type EIO_SeekToLast(eio_req *req);
 
     static void EIO_BeforeSeekToFirst(SeekParams *params);
-    static int EIO_SeekToFirst(eio_req *req);
+    static eio_return_type EIO_SeekToFirst(eio_req *req);
 
     static int EIO_AfterSeek(eio_req *req);
 };

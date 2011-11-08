@@ -30,6 +30,10 @@ def clean(ctx):
   if exists("build"): rmtree("build")
   if exists(build_config): remove(build_config)
 
+def build_post(bld):
+  module_path = bld.path.find_resource('leveldb.node').abspath(bld.env)
+  system('cp %r build/leveldb.node' % module_path)
+
 def build(bld):
   node_leveldb = bld.new_task_gen("cxx", "shlib", "node_addon")
   node_leveldb.source = leveldb_src + node_leveldb_src
@@ -38,3 +42,4 @@ def build(bld):
   node_leveldb.uselib = ["pthread"]
   node_leveldb.includes = [leveldb_dir, leveldb_dir + '/include']
   node_leveldb.cxxflags = ['-O2', '-DNDEBUG', '-DLEVELDB_PLATFORM_STD']
+  bld.add_post_fun(build_post)

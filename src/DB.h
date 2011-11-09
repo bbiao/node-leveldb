@@ -21,6 +21,8 @@ public:
 
   static void Init(Handle<Object> target);
 
+  static bool HasInstance(Handle<Value> val);
+
 private:
   static Handle<Value> New(const Arguments& args);
 

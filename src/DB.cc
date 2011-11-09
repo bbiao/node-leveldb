@@ -51,6 +51,16 @@ void DB::Init(Handle<Object> target) {
   target->Set(String::NewSymbol("DB"), persistent_function_template->GetFunction());
 }
 
+bool DB::HasInstance(Handle<Value> val) {
+  if (!val->IsObject()) return false;
+  Local<Object> obj = val->ToObject();
+
+  if (persistent_function_template->HasInstance(obj))
+    return true;
+
+  return false;
+}
+
 Handle<Value> DB::New(const Arguments& args) {
   HandleScope scope;
 

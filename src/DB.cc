@@ -526,10 +526,13 @@ void DB::Params::Callback(Handle<Value> result) {
       if (result.IsEmpty()) {
         callback->Call(self->handle_, 0, NULL);
       } else {
-        Handle<Value> undef = Undefined();
-        Handle<Value> argv[] = { undef, result };
+        Handle<Value> argv[] = { Null(), result };
         callback->Call(self->handle_, 2, argv);
       }
+    } else if (status.IsNotFound()) {
+      // not found, return (null, undef)
+      Handle<Value> argv[] = { Null() };
+      callback->Call(self->handle_, 1, argv);
     } else {
       // error, callback with first argument as error object
       Handle<String> message = String::New(status.ToString().c_str());

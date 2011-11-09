@@ -5,6 +5,8 @@
 #include <node_buffer.h>
 #include "helpers.h"
 
+#include <stdlib.h>
+
 using namespace node_leveldb;
 
 Persistent<FunctionTemplate> DB::persistent_function_template;
@@ -390,12 +392,6 @@ Handle<Value> DB::Get(const Arguments& args) {
     return ThrowException(Exception::Error(String::New("DB has not been opened")));
   }
   
-  std::vector<std::string> *strings = NULL;
-  if (args[0]->IsString()) {
-    strings = new std::vector<std::string>(1);
-  }
-  leveldb::Slice key = JsToSlice(args[0], strings);
-  
   int pos = 1;
 
   // Optional read options
@@ -420,7 +416,22 @@ Handle<Value> DB::Get(const Arguments& args) {
   }
   
   // Pass parameters to async function
-  ReadParams *params = new ReadParams(self, key, options, asBuffer, callback, strings);
+  ReadParams *params = new ReadParams(self, options, asBuffer, callback);
+
+  // Set key parameter
+  if (args[0]->IsString()) {
+    String::Utf8Value str(args[0]);
+    params->keyLen = str.length();
+    char *tmp = (char*)malloc(params->keyLen);
+    memcpy(tmp, *str, params->keyLen);
+    params->key = tmp;
+    params->keyBuf = Persistent<Object>();
+  } else {
+    Handle<Object> buf = args[0]->ToObject();
+    params->key = Buffer::Data(buf);
+    params->keyLen = Buffer::Length(buf);
+    params->keyBuf = Persistent<Object>::New(buf);
+  }
   EIO_BeforeRead(params);
 
   return args.This();
@@ -434,9 +445,11 @@ eio_return_type DB::EIO_Read(eio_req *req) {
   ReadParams *params = static_cast<ReadParams*>(req->data);
   DB *self = params->self;
 
+  leveldb::Slice key(params->key, params->keyLen);
+
   // Do the actual work
   if (self->db != NULL) {
-    params->status = self->db->Get(params->options, params->key, &params->result);
+    params->status = self->db->Get(params->options, key, &params->result);
   }
 
   eio_return_stmt;
@@ -450,6 +463,12 @@ int DB::EIO_AfterRead(eio_req *req) {
     params->Callback(Bufferize(params->result));
   } else {
     params->Callback(String::New(params->result.data(), params->result.length()));
+  }
+
+  if (!params->keyBuf.IsEmpty()) {
+    params->keyBuf.Dispose();
+  } else {
+    free(params->key);
   }
 
   delete params;
@@ -600,11 +619,3 @@ void DB::Params::Callback(Handle<Value> result) {
     }
   }
 }
-
-DB::ReadParams::~ReadParams() {
-  if (strings != NULL) {
-    delete strings;
-  }
-}
-
-

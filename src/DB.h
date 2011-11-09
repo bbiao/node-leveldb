@@ -67,13 +67,14 @@ private:
   };
 
   struct ReadParams : Params {
-    ReadParams(DB *self, leveldb::Slice key, leveldb::ReadOptions &options, Handle<Function> callback, std::vector<std::string> *strings = NULL)
-      : Params(self, callback), key(key), options(options), strings(strings) {}
+    ReadParams(DB *self, leveldb::Slice key, leveldb::ReadOptions &options, bool asBuffer, Handle<Function> callback, std::vector<std::string> *strings = NULL)
+    : Params(self, callback), key(key), options(options), asBuffer(asBuffer), strings(strings) {}
     
     virtual ~ReadParams();
 
     leveldb::Slice key;
     leveldb::ReadOptions options;
+    bool asBuffer;
     std::vector<std::string> *strings;
     std::string result;
   };

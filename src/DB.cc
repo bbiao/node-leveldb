@@ -405,6 +405,13 @@ Handle<Value> DB::Get(const Arguments& args) {
     pos++;
   }
 
+  // Optional asBuffer setting
+  bool asBuffer = false;
+  if (pos < args.Length() && args[pos]->IsBoolean()) {
+    asBuffer = args[pos]->ToBoolean()->BooleanValue();
+    pos++;
+  }
+
   // Optional callback
   Local<Function> callback;
   if (pos < args.Length() && args[pos]->IsFunction()) {
@@ -413,7 +420,7 @@ Handle<Value> DB::Get(const Arguments& args) {
   }
   
   // Pass parameters to async function
-  ReadParams *params = new ReadParams(self, key, options, callback, strings);
+  ReadParams *params = new ReadParams(self, key, options, asBuffer, callback, strings);
   EIO_BeforeRead(params);
 
   return args.This();
@@ -439,7 +446,11 @@ int DB::EIO_AfterRead(eio_req *req) {
   HandleScope scope;
   
   ReadParams *params = static_cast<ReadParams*>(req->data);
-  params->Callback(String::New(params->result.data(), params->result.length()));
+  if (params->asBuffer) {
+    params->Callback(Bufferize(params->result));
+  } else {
+    params->Callback(String::New(params->result.data(), params->result.length()));
+  }
 
   delete params;
   return 0;

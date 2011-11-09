@@ -35,6 +35,7 @@ private:
 
   static Handle<Value> Get(const Arguments& args);
 
+  static void unrefIterator(Persistent<Value> object, void* parameter);
   static Handle<Value> NewIterator(const Arguments& args);
 
   static Handle<Value> GetSnapshot(const Arguments& args);
@@ -104,6 +105,7 @@ private:
   
   leveldb::DB* db;
   static Persistent<FunctionTemplate> persistent_function_template;
+  std::vector< Persistent<Object> > iteratorList;
 };
 
 } // node_leveldb

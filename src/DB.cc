@@ -172,6 +172,15 @@ eio_return_type DB::EIO_Close(eio_req *req) {
   DB *self = params->self;
 
   if (self->db != NULL) {
+    // Close iterators because they must run their destructors before we can delete
+    // the db object.
+    std::vector< Persistent<Object> >::iterator it;
+    for (it = self->iteratorList.begin(); it != self->iteratorList.end(); it++) {
+      Iterator *itObj = ObjectWrap::Unwrap<Iterator>(*it);
+      if (itObj) {
+        itObj->Close();
+      }
+    }
     delete self->db;
     self->db = NULL;
   }
@@ -436,12 +445,27 @@ int DB::EIO_AfterRead(eio_req *req) {
   return 0;
 }
 
+void DB::unrefIterator(Persistent<Value> object, void* parameter) {
+	std::vector< Persistent<Object> > *iteratorList =
+    (std::vector< Persistent<Object> > *) parameter;
+
+  Iterator *itTarget = ObjectWrap::Unwrap<Iterator>(object->ToObject());
+
+  std::vector< Persistent<Object> >::iterator it;
+  for (it = iteratorList->begin(); it != iteratorList->end(); it++) {
+    Iterator *itCandidate = ObjectWrap::Unwrap<Iterator>(*it);
+    if (itCandidate == itTarget) {
+      iteratorList->erase(it, it);
+    }
+  }
+	object.Dispose();
+}
 
 Handle<Value> DB::NewIterator(const Arguments& args) {
   HandleScope scope;
 
   if (!(args.Length() == 1 && args[0]->IsObject())) {
-      return ThrowException(Exception::TypeError(String::New("Invalid arguments: Expected (Object)")));
+    return ThrowException(Exception::TypeError(String::New("Invalid arguments: Expected (Object)")));
   } // if
   
   DB* self = ObjectWrap::Unwrap<DB>(args.This());
@@ -452,10 +476,14 @@ Handle<Value> DB::NewIterator(const Arguments& args) {
   // converts an actual instance to it's binding representation
   // https://github.com/taggon/node-gd/blob/master/gd_bindings.cc#L79
   // Guess, I'll understand it soon...
-  Local<Value> _arg_ = External::New(it);
-  Persistent<Object> _it_(Iterator::persistent_function_template->GetFunction()->NewInstance(1, &_arg_));
-  
-  return scope.Close(_it_);
+  Local<Value> argv[] = {External::New(it), args.This()};
+  Handle<Object> itHandle = Iterator::persistent_function_template->GetFunction()->NewInstance(2, argv);
+
+  // Keep a weak reference
+  self->iteratorList.push_back(Persistent<Object>::New(itHandle));
+  self->iteratorList.back().MakeWeak(&self->iteratorList, &DB::unrefIterator);
+
+  return scope.Close(itHandle);
 }
 
 Handle<Value> DB::GetSnapshot(const Arguments& args) {

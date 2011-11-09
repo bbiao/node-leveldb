@@ -18,6 +18,8 @@ class Iterator : ObjectWrap {
     Iterator();
     ~Iterator();
 
+    void Close();
+
     static Persistent<FunctionTemplate> persistent_function_template;
     static void Init(Handle<Object> target);
     static Handle<Value> New(const Arguments& args);
@@ -34,8 +36,9 @@ class Iterator : ObjectWrap {
     static Handle<Value> status(const Arguments& args);
 
   private:
-    leveldb::Iterator* it;    
-    
+    leveldb::Iterator* it;
+    Persistent<Object> db;
+
     struct SeekParams {
        SeekParams(Iterator* it, leveldb::Slice k, Handle<Function> cb) {
           self = it;

@@ -308,9 +308,14 @@ Handle<Value> DB::Write(const Arguments& args) {
     callback = Local<Function>::Cast(args[pos]);
     pos++;
   }
-  
+
   // Pass parameters to async function
   WriteParams *params = new WriteParams(self, writeBatch, options, callback);
+
+  if (!params->disposeWriteBatch) {
+    writeBatch->Ref();
+  }
+
   EIO_BeforeWrite(params);
 
   return args.This();
@@ -340,6 +345,8 @@ int DB::EIO_AfterWrite(eio_req *req) {
 
   if (params->disposeWriteBatch) {
     delete params->writeBatch;
+  } else {
+    params->writeBatch->Unref();
   }
 
   delete params;

@@ -182,6 +182,7 @@ eio_return_type DB::EIO_Close(eio_req *req) {
       if (itObj) {
         itObj->Close();
       }
+      self->iteratorList.erase(it);
     }
     delete self->db;
     self->db = NULL;

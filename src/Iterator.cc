@@ -213,6 +213,10 @@ Handle<Value> Iterator::key(const Arguments& args) {
       return ThrowException(Exception::Error(String::New("Iterator or underlying DB has been closed")));
     }
 
+    if (!self->it->Valid()) {
+      return scope.Close(Null());
+    }
+
     leveldb::Slice k = self->it->key();
     
     return scope.Close(Bufferize(k.ToString()));
@@ -224,6 +228,10 @@ Handle<Value> Iterator::value(const Arguments& args) {
 
     if (self->it == NULL) {
       return ThrowException(Exception::Error(String::New("Iterator or underlying DB has been closed")));
+    }
+
+    if (!self->it->Valid()) {
+      return scope.Close(Null());
     }
 
     leveldb::Slice v = self->it->value();

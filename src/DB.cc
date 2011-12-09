@@ -6,6 +6,7 @@
 #include "helpers.h"
 
 #include <stdlib.h>
+#include <algorithm>
 
 using namespace node_leveldb;
 
@@ -174,16 +175,18 @@ eio_return_type DB::EIO_Close(eio_req *req) {
   DB *self = params->self;
 
   if (self->db != NULL) {
-    // Close iterators because they must run their destructors before we can delete
-    // the db object.
+    // Close iterators because they must run their destructors before
+    // we can delete the db object.
     std::vector< Persistent<Object> >::iterator it;
     for (it = self->iteratorList.begin(); it != self->iteratorList.end(); it++) {
       Iterator *itObj = ObjectWrap::Unwrap<Iterator>(*it);
       if (itObj) {
         itObj->Close();
       }
-      self->iteratorList.erase(it);
+      it->Dispose();
+      it->Clear();
     }
+    self->iteratorList.clear();
     delete self->db;
     self->db = NULL;
   }
@@ -476,20 +479,20 @@ int DB::EIO_AfterRead(eio_req *req) {
   return 0;
 }
 
+bool CheckAlive(Persistent<Object> o) {
+  return !o.IsNearDeath();
+};
+
 void DB::unrefIterator(Persistent<Value> object, void* parameter) {
-	std::vector< Persistent<Object> > *iteratorList =
+  std::vector< Persistent<Object> > *iteratorList =
     (std::vector< Persistent<Object> > *) parameter;
 
   Iterator *itTarget = ObjectWrap::Unwrap<Iterator>(object->ToObject());
 
-  std::vector< Persistent<Object> >::iterator it;
-  for (it = iteratorList->begin(); it != iteratorList->end(); it++) {
-    Iterator *itCandidate = ObjectWrap::Unwrap<Iterator>(*it);
-    if (itCandidate == itTarget) {
-      iteratorList->erase(it, it);
-    }
-  }
-	object.Dispose();
+  std::vector< Persistent<Object> >::iterator i =
+    partition(iteratorList->begin(), iteratorList->end(), CheckAlive);
+
+  iteratorList->erase(i, iteratorList->end());
 }
 
 Handle<Value> DB::NewIterator(const Arguments& args) {
@@ -511,8 +514,9 @@ Handle<Value> DB::NewIterator(const Arguments& args) {
   Handle<Object> itHandle = Iterator::persistent_function_template->GetFunction()->NewInstance(2, argv);
 
   // Keep a weak reference
-  self->iteratorList.push_back(Persistent<Object>::New(itHandle));
-  self->iteratorList.back().MakeWeak(&self->iteratorList, &DB::unrefIterator);
+  Persistent<Object> weakHandle = Persistent<Object>::New(itHandle);
+  weakHandle.MakeWeak(&self->iteratorList, &DB::unrefIterator);
+  self->iteratorList.push_back(weakHandle);
 
   return scope.Close(itHandle);
 }

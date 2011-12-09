@@ -18,10 +18,8 @@ DB::DB()
 }
 
 DB::~DB() {
-  if (db != NULL) {
-    delete db;
-    db = NULL;
-  }
+  // Close database and delete db
+  Close();
 }
 
 void DB::Init(Handle<Object> target) {
@@ -122,10 +120,7 @@ eio_return_type DB::EIO_Open(eio_req *req) {
   DB *self = params->self;
 
   // Close old DB, if open() is called more than once
-  if (self->db != NULL) {
-    delete self->db;
-    self->db = NULL;
-  }
+  self->Close();
 
   // Do the actual work
   params->status = leveldb::DB::Open(params->options, params->name, &self->db);
@@ -148,6 +143,25 @@ int DB::EIO_AfterOpen(eio_req *req) {
 // Close
 //
 
+void DB::Close() {
+  if (db != NULL) {
+    // Close iterators because they must run their destructors before
+    // we can delete the db object.
+    std::vector< Persistent<Object> >::iterator it;
+    for (it = iteratorList.begin(); it != iteratorList.end(); it++) {
+      Iterator *itObj = ObjectWrap::Unwrap<Iterator>(*it);
+      if (itObj) {
+        itObj->Close();
+      }
+      it->Dispose();
+      it->Clear();
+    }
+    iteratorList.clear();
+    delete db;
+    db = NULL;
+  }
+};
+
 Handle<Value> DB::Close(const Arguments& args) {
   HandleScope scope;
 
@@ -159,6 +173,8 @@ Handle<Value> DB::Close(const Arguments& args) {
   if (0 < args.Length() && args[0]->IsFunction()) {
     callback = Local<Function>::Cast(args[0]);
   }
+
+  self->Close();
 
   Params *params = new Params(self, callback);
   EIO_BeforeClose(params);
@@ -174,23 +190,6 @@ eio_return_type DB::EIO_Close(eio_req *req) {
   Params *params = static_cast<Params*>(req->data);
   DB *self = params->self;
 
-  if (self->db != NULL) {
-    // Close iterators because they must run their destructors before
-    // we can delete the db object.
-    std::vector< Persistent<Object> >::iterator it;
-    for (it = self->iteratorList.begin(); it != self->iteratorList.end(); it++) {
-      Iterator *itObj = ObjectWrap::Unwrap<Iterator>(*it);
-      if (itObj) {
-        itObj->Close();
-      }
-      it->Dispose();
-      it->Clear();
-    }
-    self->iteratorList.clear();
-    delete self->db;
-    self->db = NULL;
-  }
-  
   eio_return_stmt;
 }
 

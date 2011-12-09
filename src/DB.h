@@ -23,6 +23,8 @@ public:
 
   static bool HasInstance(Handle<Value> val);
 
+  void Close();
+
 private:
   static Handle<Value> New(const Arguments& args);
 

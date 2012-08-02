@@ -35,6 +35,7 @@ describe 'PartitionedBitwiseComparator', ->
       k = 0 # 0 - 9
       db.forRange (err, key) ->
         assert.ifError err
+        console.log key
         assert.equal key[0], i
         assert.equal key[1], j
         assert.equal key[2], k

@@ -1,5 +1,5 @@
 assert  = require 'assert'
-leveldb = require '../lib'
+leveldb = require '../build/Release/leveldb'
 
 console.log 'Creating test database'
 path = '/tmp/wr.db'
@@ -21,15 +21,15 @@ leveldb.open path, create_if_missing: true, (err, db) ->
     console.log "i = #{i}" if i % 10000 == 0
     batch = new(leveldb.Batch)
     for j in [0...batchSize]
-      key = "row#{i}"
-      value = JSON.stringify
+      key = new Buffer "row#{i}"
+      value = new Buffer JSON.stringify
         index: i
         name: "Tim"
         age: 28
       batch.put key, value
       ++i
 
-    db.write batch, (err) ->
+    db.write batch, {}, (err) ->
       throw err if err
       if i < totalSize then writeBench() else readBenchStart()
 
@@ -40,8 +40,8 @@ leveldb.open path, create_if_missing: true, (err, db) ->
   readBench = ->
     --i
     console.log "i = #{i}" if i % 10000 == 0
-    key = "row#{i}"
-    db.get key, (err, value) ->
+    key = new Buffer "row#{i}"
+    db.get key, {}, (err, value) ->
       throw err if err
       value = JSON.parse value
       assert.equal value.index, i

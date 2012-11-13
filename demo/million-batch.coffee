@@ -1,5 +1,5 @@
 assert  = require 'assert'
-leveldb = require '../lib'
+leveldb = require '../build/Release/leveldb'
 
 console.log 'Creating test database'
 path = '/tmp/large.db'
@@ -22,18 +22,21 @@ leveldb.open path, create_if_missing: true, (err, db) ->
     console.log "i = #{i}" if i % 10000 == 0
     batch = new(leveldb.Batch)
     for j in [0...batchSize]
-      key = "row#{i}"
-      value = JSON.stringify
+      key = new Buffer "row#{i}"
+      value = new Buffer JSON.stringify
         index: i
         name: "Tim"
         age: 28
       batch.put key, value
       ++i
 
-    db.write batch, (err) ->
+    db.write batch, {}, (err) ->
       throw err if err
-      if i < totalSize then bench() else callback()
-      db = null
-      gc?() # explicit gc if enabled - useful for debugging memleaks
+      if i < totalSize
+        bench()
+      else
+        callback()
+        db = null
+        gc?() # explicit gc if enabled - useful for debugging memleaks
 
   bench()

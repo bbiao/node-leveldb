@@ -11,14 +11,14 @@ AC_INIT([snappy], [snappy_major.snappy_minor.snappy_patchlevel])
 AC_CONFIG_MACRO_DIR([m4])
 
 # These are flags passed to automake (though they look like gcc flags!)
-AM_INIT_AUTOMAKE([-Wall -Werror])
+AM_INIT_AUTOMAKE([-Wall])
 
 LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 AC_PROG_CXX
 AC_LANG([C++])
 AC_C_BIGENDIAN
-AC_CHECK_HEADERS([stdint.h stddef.h sys/mman.h sys/resource.h windows.h byteswap.h sys/byteswap.h sys/endian.h])
+AC_CHECK_HEADERS([stdint.h stddef.h sys/mman.h sys/resource.h windows.h byteswap.h sys/byteswap.h sys/endian.h sys/time.h])
 
 # Don't use AC_FUNC_MMAP, as it checks for mappings of already-mapped memory,
 # which we don't need (and does not exist on Windows).
